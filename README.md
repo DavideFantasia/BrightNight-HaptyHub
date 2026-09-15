@@ -1,4 +1,6 @@
 [🇬🇧 Eng](README_en.md) | [🇮🇹 It](README.md)
+---
+
 # SVG to 3D Tile Generator
 
 Applicazione desktop in Python e PyQt6 che trasforma disegni vettoriali 2D (SVG) in tessere 3D (STL) pronte per la stampa. 
