@@ -1,7 +1,8 @@
 [🇬🇧 Eng](README_en.md) | [🇮🇹 It](README.md)
----
 
-# SVG to 3D Tile Generator
+---
+# HaptyHub x  BrightNight@Pisa
+## SVG to 3D Tile Generator
 
 A Python and PyQt6 desktop application that transforms 2D vector drawings (SVG) into 3D tiles (STL) ready for printing. 
 
