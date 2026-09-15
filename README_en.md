@@ -24,7 +24,7 @@ To run the application, your system must meet the following requirements:
 
 1.  Clone the repository:
     ```bash
-    git clone [https://github.com/DavideFantasia/BrightNight-HaptyHub](https://github.com/DavideFantasia/BrightNight-HaptyHub)
+    git clone https://github.com/DavideFantasia/BrightNight-HaptyHub
     cd BrightNight-HaptyHub
     ```
 2.  Run the installation script for **Linux**:
