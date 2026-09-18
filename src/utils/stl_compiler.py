@@ -38,13 +38,16 @@ class STLCompilerWorker(QThread):
             // Parametri della tessera
             width = 60;            
             length = 40;
-            base_thickness = 2;
+            total_height = 3.5;    // Altezza totale del bordo esterno
+            floor_height = 2.0;    // Altezza del pavimento interno (spessore della base)
+            border_width = 2.0;    // Spessore del bordo rialzato (cornice)
             
-            // Parametri estetici e di incisione
+            // L'estrusione del disegno parte dal pavimento e arriva esattamente a filo col bordo
+            extrusion_height = total_height - floor_height; 
+            
+            // Parametri estetici
             r_corner = 4;          // Raggio degli angoli arrotondati
             bevel = 0.25;          // Smusso esterno
-            groove_depth = 0.4;    // Profondità dell'intarsio
-            engrave_depth = 1.0;   // Profondità dell'incisione dell'SVG
             
             // Modulo per creare il profilo 2D arrotondato
             module rounded_base(w, l, r) {{
@@ -56,32 +59,28 @@ class STLCompilerWorker(QThread):
                 }}
             }}
 
-            // Operazione di sottrazione globale
-            difference() {{
-                // 1. SOLIDO PRINCIPALE: Base principale con smusso
-                minkowski() {{
-                    linear_extrude(height = base_thickness - bevel)
-                        rounded_base(width - bevel*2, length - bevel*2, max(0.1, r_corner - bevel));
+            union() {{
+                difference() {{
+                    // 1. Corpo principale alto (con smusso esterno)
+                    minkowski() {{
+                        linear_extrude(height = total_height - bevel)
+                            rounded_base(width - bevel*2, length - bevel*2, max(0.1, r_corner - bevel));
+                        
+                        cylinder(r1=bevel, r2=0, h=bevel, $fn=16);
+                    }}
                     
-                    cylinder(r1=bevel, r2=0, h=bevel, $fn=16);
-                }}
-                
-                // 2. SOTTRAZIONE A: Intarsio incavato sul bordo
-                translate([0, 0, base_thickness - groove_depth])
-                linear_extrude(height = groove_depth + 1) {{
-                    difference() {{
-                        // Profilo esterno a 1mm dal bordo
-                        rounded_base(width - 2, length - 2, max(0.1, r_corner - 1));
-                        // Profilo interno a 2mm dal bordo (spessore intarsio = 1mm)
-                        rounded_base(width - 4, length - 4, max(0.1, r_corner - 2));
+                    // 2. Scavo centrale (crea l'effetto a conca)
+                    // Tagliamo la parte centrale partendo dall'altezza del pavimento verso l'alto
+                    translate([0, 0, floor_height])
+                    linear_extrude(height = total_height) {{
+                        rounded_base(width - border_width*2, length - border_width*2, max(0.1, r_corner - border_width));
                     }}
                 }}
-                
-                // 3. SOTTRAZIONE B: SVG inciso (Engraving)
-                // Posizionato in modo da scavare partendo dalla profondità voluta (engrave_depth) 
-                // e tagliando verso l'alto superando la superficie (+1) per evitare artefatti
-                translate([0, 0, base_thickness - engrave_depth])
-                linear_extrude(height = engrave_depth + 1) {{
+
+                // 3. SVG estruso al centro
+                // Inizia dal pavimento e si alza fino a raggiungere l'altezza del bordo
+                translate([0, 0, floor_height])
+                linear_extrude(height = extrusion_height) {{
                     import("{safe_svg_path}", center=true);
                 }}
             }}
