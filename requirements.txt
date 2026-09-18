@@ -7,3 +7,4 @@ numpy           # per il calcolo numerico e la gestione degli array
 numpy-stl       # per la creazione di modelli 3D in formato STL
 PyOpenGL        # per la visualizzazione 3D e il rendering
 PyOpenGL_accelerate # per migliorare le prestazioni di PyOpenGL
+pyqtgraph       # per la creazione di grafici e visualizzazioni
