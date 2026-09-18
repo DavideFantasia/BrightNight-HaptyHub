@@ -135,34 +135,50 @@ class STLViewerWidget(QWidget):
                         }
                     """),
                     shaders.FragmentShader("""
-                        precision mediump float; // <-- AGGIUNTA FONDAMENTALE PER LINUX/MESA
+                        precision mediump float;
                         
                         varying vec4 v_color;
                         varying vec3 v_normal;
                         
                         void main() {
-                            // Luce Principale (X, Y, Z). Z=1.0 significa dall'alto. 
-                            vec3 lightDir = normalize(vec3(0.2, -0.3, 1.0));
-                            float diff = max(dot(v_normal, lightDir), 0.0);
+                            vec3 norm = normalize(v_normal);
                             
-                            // Luce di riempimento dal lato opposto
-                            vec3 fillDir = normalize(vec3(-0.5, 0.5, 0.5));
-                            float fill = max(dot(v_normal, fillDir), 0.0);
+                            // Direzione luce principale
+                            vec3 lightDir = normalize(vec3(0.5, -0.5, 1.0));
                             
-                            // Luce ambientale di base
-                            float ambient = 0.4; 
+                            // Direzione vista approssimata (la telecamera che guarda il modello)
+                            vec3 viewDir = normalize(vec3(0.0, -0.3, 1.0));
                             
-                            float intensity = ambient + (diff * 0.6) + (fill * 0.15);
-                            gl_FragColor = vec4(v_color.rgb * intensity, v_color.a);
+                            // 1. Componente Ambientale (luce di base)
+                            float ambient = 0.25;
+                            
+                            // 2. Componente Diffusa (lambertiana)
+                            float diff = max(dot(norm, lightDir), 0.0);
+                            
+                            // 3. Componente Speculare (Phong)
+                            vec3 reflectDir = reflect(-lightDir, norm);
+                            // Il valore 32.0 regola la concentrazione del riflesso (shininess)
+                            float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0); 
+                            float specular = 0.5 * spec; // Intensità del riflesso bianco
+                            
+                            // Luce di riempimento per le zone in ombra
+                            vec3 fillDir = normalize(vec3(-0.8, 0.5, 0.2));
+                            float fill = 0.1 * max(dot(norm, fillDir), 0.0);
+                            
+                            // Calcolo intensità totale e somma col riflesso speculare
+                            float diffuseIntensity = ambient + (diff * 0.65) + fill;
+                            vec3 finalColor = (v_color.rgb * diffuseIntensity) + vec3(specular);
+                            
+                            gl_FragColor = vec4(finalColor, v_color.a);
                         }
                     """)
                 ])
 
             self.current_mesh_item = gl.GLMeshItem(
                 meshdata=mesh_data,
-                smooth=False,
-                drawEdges=False,
-                color=(0.9, 0.9, 0.9, 1.0),
+                smooth=True,           # interpolazione normali per far funzionare bene il Phong
+                drawEdges=False,       # Puoi impostarlo a True se vuoi vedere anche le linee del wireframe
+                color=(0.55, 0.6, 0.65, 1.0), # Reso leggermente più scuro (grigio-blu) per far risaltare i riflessi speculari bianchi
                 shader='relief_shader',
                 glOptions='opaque'
             )

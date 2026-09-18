@@ -31,22 +31,57 @@ class STLCompilerWorker(QThread):
             # 2. Crea il file SCAD temporaneo
             temp_scad_path = os.path.join(output_dir, "temp_tile.scad")
             
-            # Modello OpenSCAD parametrico generato dinamicamente
+            # Modello OpenSCAD parametrico
             scad_content = f"""
+            $fn = 32; // Risoluzione per le curve
+            
             // Parametri della tessera
-            width = 50;
-            length = 50;
+            width = 60;            
+            length = 40;
             base_thickness = 2;
-            extrusion_height = 1.5;
+            
+            // Parametri estetici e di incisione
+            r_corner = 4;          // Raggio degli angoli arrotondati
+            bevel = 0.25;          // Smusso esterno
+            groove_depth = 0.4;    // Profondità dell'intarsio
+            engrave_depth = 1.0;   // Profondità dell'incisione dell'SVG
+            
+            // Modulo per creare il profilo 2D arrotondato
+            module rounded_base(w, l, r) {{
+                hull() {{
+                    translate([w/2-r, l/2-r]) circle(r=r);
+                    translate([-w/2+r, l/2-r]) circle(r=r);
+                    translate([w/2-r, -l/2+r]) circle(r=r);
+                    translate([-w/2+r, -l/2+r]) circle(r=r);
+                }}
+            }}
 
-            // Generazione del solido
-            union() {{
-                // Base solida
-                cube([width, length, base_thickness], center=true);
+            // Operazione di sottrazione globale
+            difference() {{
+                // 1. SOLIDO PRINCIPALE: Base principale con smusso
+                minkowski() {{
+                    linear_extrude(height = base_thickness - bevel)
+                        rounded_base(width - bevel*2, length - bevel*2, max(0.1, r_corner - bevel));
+                    
+                    cylinder(r1=bevel, r2=0, h=bevel, $fn=16);
+                }}
                 
-                // SVG estruso in superficie
-                translate([0, 0, base_thickness/2])
-                linear_extrude(height = extrusion_height) {{
+                // 2. SOTTRAZIONE A: Intarsio incavato sul bordo
+                translate([0, 0, base_thickness - groove_depth])
+                linear_extrude(height = groove_depth + 1) {{
+                    difference() {{
+                        // Profilo esterno a 1mm dal bordo
+                        rounded_base(width - 2, length - 2, max(0.1, r_corner - 1));
+                        // Profilo interno a 2mm dal bordo (spessore intarsio = 1mm)
+                        rounded_base(width - 4, length - 4, max(0.1, r_corner - 2));
+                    }}
+                }}
+                
+                // 3. SOTTRAZIONE B: SVG inciso (Engraving)
+                // Posizionato in modo da scavare partendo dalla profondità voluta (engrave_depth) 
+                // e tagliando verso l'alto superando la superficie (+1) per evitare artefatti
+                translate([0, 0, base_thickness - engrave_depth])
+                linear_extrude(height = engrave_depth + 1) {{
                     import("{safe_svg_path}", center=true);
                 }}
             }}
